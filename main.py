@@ -65,7 +65,7 @@ app = Flask(__name__)
 recipe_system = RecipeRecommendationSystem()
 
 
-API_KEY = ""
+API_KEY = "JLH8Wgq4goo4kbFq2FXdJICgri0IdmInQIa1s4e4FfyUYcHWS6GWa6tP"
 PEXELS_URL = "https://api.pexels.com/v1/search"
 
 def fetch_image_url(recipe_name):
@@ -112,6 +112,9 @@ def recommend():
     result = []
     for rec in recommendations:
         recipe = rec['recipe']
+        image_url = fetch_image_url(recipe["name"])  # Fetch image URL for each recipe
+        recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default if no image found
+        
         result.append({
             'id': recipe['id'],
             'name': recipe['name'],
@@ -121,7 +124,7 @@ def recommend():
             # 'cooking_time': recipe['cooking_time'],
             # 'skill_level': recipe['skill_level'],
             # 'cuisine': recipe['cuisine'],
-            # 'image_url': recipe['image_url'],
+            'image_url': recipe['image_url'],
             'full_recipe': recipe['fullRecipe'],
             # 'nutrition': recipe['nutrition']
         })
