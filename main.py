@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify
 import random
 import json
 import requests
+import re
 
 
 class RecipeRecommendationSystem:
@@ -12,7 +13,14 @@ class RecipeRecommendationSystem:
             data = json.load(file)
             self.recipes = data
 
-
+    def match_ingredient_query(self, ingredient, query):
+        """
+        Match the ingredient using a case-insensitive query-based approach
+        that can handle variations like 'potatoes' and 'potato'.
+        """
+        # Regex pattern to match different variations of ingredients
+        pattern = re.compile(r'\b' + re.escape(query) + r'\w*\b', re.IGNORECASE)
+        return bool(pattern.search(ingredient))  # Check if query matches any part of the ingredient
     
     def recommend_recipes(self, 
                           available_ingredients
@@ -28,7 +36,12 @@ class RecipeRecommendationSystem:
         for recipe in self.recipes:
             # Ingredient matching
             recipe_ingredients = [ing.lower() for ing in recipe['ingredients']]
-            matched_ingredients = set(recipe_ingredients) & set(available_ingredients)
+                        # Search for matches based on query-like approach
+            matched_ingredients = []
+            for recipe_ingredient in recipe_ingredients:
+                for user_ingredient in available_ingredients:
+                    if self.match_ingredient_query(recipe_ingredient, user_ingredient):
+                        matched_ingredients.append(user_ingredient)
             # Calculate match percentage with additional flexibility
             if len(recipe_ingredients) > 0:
                 match_percentage = len(matched_ingredients) / len(recipe_ingredients) * 100
@@ -54,7 +67,7 @@ class RecipeRecommendationSystem:
                 recommended.append({
                     "recipe": recipe,
                     "match_percentage": match_percentage,
-                    "matched_ingredients": list(matched_ingredients)
+                    "matched_ingredients": matched_ingredients
                 })
         
         # Sort by match percentage
