@@ -23,17 +23,22 @@ class RecipeRecommendationSystem:
         return bool(pattern.search(ingredient))  # Check if query matches any part of the ingredient
     
     def recommend_recipes(self, 
-                          available_ingredients
+                          available_ingredients,
+                          dietary_restrictions,
                           ):
         """
         Main recommendation method with flexible filtering
         """
         # Convert inputs to lowercase for case-insensitive matching
         available_ingredients = [ing.lower() for ing in available_ingredients]
-        
+        print(dietary_restrictions)
+        vegetarian = 0
+        if 'vegetarian' in dietary_restrictions:
+            vegetarian = 1
         # Filter recipes
         recommended = []
         for recipe in self.recipes:
+         
             # Ingredient matching
             recipe_ingredients = [ing.lower() for ing in recipe['ingredients']]
                         # Search for matches based on query-like approach
@@ -48,11 +53,11 @@ class RecipeRecommendationSystem:
             else:
                 match_percentage = 0
             
-            # # Apply filters
-            # dietary_match = (not dietary_restrictions) or \
-            #                 (dietary_restrictions == ['none']) or \
-            #                 any(rest in recipe['dietary_restrictions'] for rest in dietary_restrictions)
-            
+            # Apply filters
+            if vegetarian:
+                if recipe['is_vegetarian'] == False:
+                    continue
+         
             # time_match = recipe['cooking_time'] <= max_cooking_time
             
             # skill_hierarchy = {
@@ -108,25 +113,30 @@ def recommend():
     # Get form data
     ingredients = request.form.get('ingredients', '').split(',')
     ingredients = [ing.strip() for ing in ingredients if ing.strip()]
+
     
-    # dietary_restrictions = request.form.getlist('dietary_restrictions')
+    dietary_restrictions = request.form.getlist('dietary_restrictions')
     # max_cooking_time = int(request.form.get('cooking_time', 60))
     # skill_level = request.form.get('skill_level', 'beginner')
     
     # Get recommendations
     recommendations = recipe_system.recommend_recipes(
         available_ingredients=ingredients,
-        # dietary_restrictions=dietary_restrictions,
+        dietary_restrictions=dietary_restrictions,
         # max_cooking_time=max_cooking_time,
         # skill_level=skill_level
     )
     
     # Prepare response
+    i = 0
     result = []
     for rec in recommendations:
+        print(i)
+        i += 1
         recipe = rec['recipe']
         image_url = fetch_image_url(recipe["name"])  # Fetch image URL for each recipe
         recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default if no image found
+
         
         result.append({
             'id': recipe['id'],
@@ -134,6 +144,7 @@ def recommend():
             'ingredients': recipe['ingredients'],
             'matched_ingredients': rec['matched_ingredients'],
             'match_percentage': round(rec['match_percentage'], 2),
+            'vegetarian': recipe['is_vegetarian'],
             # 'cooking_time': recipe['cooking_time'],
             # 'skill_level': recipe['skill_level'],
             # 'cuisine': recipe['cuisine'],
