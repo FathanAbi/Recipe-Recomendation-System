@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request, jsonify
 import random
 import json
@@ -9,7 +8,7 @@ import re
 class RecipeRecommendationSystem:
     def __init__(self):
         # Expanded knowledge base of recipes
-        with open('recipes_data.json', 'r') as file:
+        with open('updated_recipes_data.json', 'r') as file:
             data = json.load(file)
             self.recipes = data
 
@@ -22,66 +21,83 @@ class RecipeRecommendationSystem:
         pattern = re.compile(r'\b' + re.escape(query) + r'\w*\b', re.IGNORECASE)
         return bool(pattern.search(ingredient))  # Check if query matches any part of the ingredient
     
-    def recommend_recipes(self, 
-                          available_ingredients,
-                          dietary_restrictions,
-                          ):
+    def recommend_recipes(self, available_ingredients, dietary_restrictions, max_cooking_time=None):
         """
         Main recommendation method with flexible filtering
         """
         # Convert inputs to lowercase for case-insensitive matching
         available_ingredients = [ing.lower() for ing in available_ingredients]
-        print(dietary_restrictions)
         vegetarian = 0
         if 'vegetarian' in dietary_restrictions:
             vegetarian = 1
+
         # Filter recipes
         recommended = []
         for recipe in self.recipes:
-         
             # Ingredient matching
             recipe_ingredients = [ing.lower() for ing in recipe['ingredients']]
-                        # Search for matches based on query-like approach
             matched_ingredients = []
+
+            # Cek kecocokan bahan
             for recipe_ingredient in recipe_ingredients:
                 for user_ingredient in available_ingredients:
                     if self.match_ingredient_query(recipe_ingredient, user_ingredient):
                         matched_ingredients.append(user_ingredient)
-            # Calculate match percentage with additional flexibility
-            if len(recipe_ingredients) > 0:
-                match_percentage = len(matched_ingredients) / len(recipe_ingredients) * 100
-            else:
-                match_percentage = 0
-            
-            # Apply filters
-            if vegetarian:
-                if recipe['is_vegetarian'] == False:
-                    continue
-         
-            # time_match = recipe['cooking_time'] <= max_cooking_time
-            
-            # skill_hierarchy = {
-            #     "beginner": ["beginner"],
-            #     "intermediate": ["beginner", "intermediate"],
-            #     "advanced": ["beginner", "intermediate", "advanced"]
-            # }
-            # skill_match = recipe['skill_level'] in skill_hierarchy.get(skill_level, [])
-            
-            # # If all conditions met
-            if match_percentage >= 20:
+
+            # Hitung jumlah bahan yang cocok
+            num_matched = len(matched_ingredients)
+            num_recipe_ingredients = len(recipe_ingredients)  # Jumlah bahan dalam resep
+
+            # Tentukan minimal kecocokan yang dibutuhkan
+            # Misalnya, setidaknya setengah dari bahan yang dimasukkan harus ada dalam resep
+            required_match = len(available_ingredients) // 2  # Setengah dari jumlah bahan yang dimasukkan
+
+            # Tentukan persentase kecocokan berdasarkan jumlah bahan yang cocok terhadap bahan dalam resep
+            match_percentage = (num_matched / num_recipe_ingredients) * 100 if num_recipe_ingredients > 0 else 0
+
+            # Tentukan apakah jumlah bahan yang cocok memenuhi syarat minimal
+            if num_matched >= required_match and match_percentage >= 20:
+                # Apply filters for vegetarian
+                if vegetarian:
+                    if recipe.get('is_vegetarian', False) == False:  # Use get() to avoid KeyError
+                        continue
+
+                # Fallback jika tidak ada 'cooking_time' pada resep
+                cooking_time = recipe.get('cooking_time', '> 20 mins')  # Default jika tidak ada
+
+                # Ekstrak cooking time menjadi integer jika dalam format string seperti '> 20 mins'
+                extracted_cooking_time = self.extract_cooking_time(cooking_time)
+
+                # Memfilter berdasarkan max_cooking_time jika diberikan
+                if max_cooking_time and extracted_cooking_time is not None:
+                    if extracted_cooking_time > max_cooking_time:
+                        continue
+
+                # Tambahkan rekomendasi dengan match_percentage berdasarkan bahan resep
                 recommended.append({
                     "recipe": recipe,
                     "match_percentage": match_percentage,
-                    "matched_ingredients": matched_ingredients
+                    "matched_ingredients": matched_ingredients,
                 })
-        
+
         # Sort by match percentage
         return sorted(recommended, key=lambda x: x['match_percentage'], reverse=True)
+
+    def extract_cooking_time(self, cooking_time_str):
+        """
+        Function to extract cooking time in minutes based on the string
+        cooking_time_str is expected to be a string like "> 20 mins" or "> 60 mins"
+        """
+        # Handle cases like '> 20 mins', '> 60 mins', etc.
+        if cooking_time_str:
+            match = re.search(r'>\s*(\d+)\s*mins?', cooking_time_str)
+            if match:
+                return int(match.group(1))  # Extract the numeric part and convert to int
+        return None  # Return None if the time format is not recognized
 
 # Flask Application
 app = Flask(__name__)
 recipe_system = RecipeRecommendationSystem()
-
 
 API_KEY = "JLH8Wgq4goo4kbFq2FXdJICgri0IdmInQIa1s4e4FfyUYcHWS6GWa6tP"
 PEXELS_URL = "https://api.pexels.com/v1/search"
@@ -114,17 +130,18 @@ def recommend():
     ingredients = request.form.get('ingredients', '').split(',')
     ingredients = [ing.strip() for ing in ingredients if ing.strip()]
 
-    
     dietary_restrictions = request.form.getlist('dietary_restrictions')
-    # max_cooking_time = int(request.form.get('cooking_time', 60))
-    # skill_level = request.form.get('skill_level', 'beginner')
+    max_cooking_time = request.form.get('cooking_time', None)
     
+    # Ensure max_cooking_time is an integer (if provided)
+    if max_cooking_time:
+        max_cooking_time = int(max_cooking_time)
+
     # Get recommendations
     recommendations = recipe_system.recommend_recipes(
         available_ingredients=ingredients,
         dietary_restrictions=dietary_restrictions,
-        # max_cooking_time=max_cooking_time,
-        # skill_level=skill_level
+        max_cooking_time=max_cooking_time
     )
     
     # Prepare response
@@ -137,7 +154,6 @@ def recommend():
         image_url = fetch_image_url(recipe["name"])  # Fetch image URL for each recipe
         recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default if no image found
 
-        
         result.append({
             'id': recipe['id'],
             'name': recipe['name'],
@@ -145,12 +161,9 @@ def recommend():
             'matched_ingredients': rec['matched_ingredients'],
             'match_percentage': round(rec['match_percentage'], 2),
             'vegetarian': recipe['is_vegetarian'],
-            # 'cooking_time': recipe['cooking_time'],
-            # 'skill_level': recipe['skill_level'],
-            # 'cuisine': recipe['cuisine'],
+            'cooking_time': recipe['cooking_time'],
             'image_url': recipe['image_url'],
             'full_recipe': recipe['fullRecipe'],
-            # 'nutrition': recipe['nutrition']
         })
     
     return render_template('recommendations.html', recommendations=result)
@@ -161,7 +174,7 @@ def recipe_details(recipe_id):
     Detailed recipe page
     """
     recipe = next((r for r in recipe_system.recipes if r['id'] == recipe_id), None)
-    #Fetch image URL based on recipe name
+    # Fetch image URL based on recipe name
     image_url = fetch_image_url(recipe["name"])
     recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default image if not found
 
