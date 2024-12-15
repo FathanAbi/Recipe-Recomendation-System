@@ -29,9 +29,8 @@ class RecipeRecommendationSystem:
         available_ingredients = [ing.lower() for ing in available_ingredients]
         excluded = [exc.lower() for exc in excluded]
 
-        vegetarian = 0
-        if 'vegetarian' in dietary_restrictions:
-            vegetarian = 1
+        vegetarian = 'vegetarian' in dietary_restrictions
+        gluten_free = 'gluten_free' in dietary_restrictions
 
         print(excluded)
 
@@ -73,10 +72,12 @@ class RecipeRecommendationSystem:
             # Tentukan apakah jumlah bahan yang cocok memenuhi syarat minimal
             if num_matched >= required_match and match_percentage >= 20:
                 # Apply filters for vegetarian
-                if vegetarian:
-                    if recipe.get('is_vegetarian', False) == False:  # Use get() to avoid KeyError
-                        continue
-
+                # Dietary restriction filters
+                if vegetarian and not recipe.get('is_vegetarian', False):
+                    continue
+                if gluten_free and not recipe.get('is_gluten_free', False):
+                    continue
+                    
                 # Fallback jika tidak ada 'cooking_time' pada resep
                 cooking_time = recipe.get('cooking_time', '> 20 mins')  # Default jika tidak ada
 
@@ -181,6 +182,7 @@ def recommend():
             'matched_ingredients': rec['matched_ingredients'],
             'match_percentage': round(rec['match_percentage'], 2),
             'vegetarian': recipe['is_vegetarian'],
+            'gluten-free': recipe['is_gluten_free'],
             'cooking_time': recipe['cooking_time'],
             'image_url': recipe['image_url'],
             'full_recipe': recipe['fullRecipe'],
