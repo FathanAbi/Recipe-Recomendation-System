@@ -44,6 +44,10 @@
                                 <input class="form-check-input" type="checkbox" name="dietary_restrictions" value="gluten_free" id="gluten_free">
                                 <label class="form-check-label" for="gluten_free">Gluten-Free</label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="dietary_restrictions" value="halal" id="halal">
+                                <label class="form-check-label" for="halal">Halal</label>
+                            </div>
                         </div>
                     </div>
 
@@ -66,18 +70,20 @@
     </div>
 
     <script>
-        // Recipe steps from the JSON data
-        const steps = recipes.fullRecipe;
+        // Example to dynamically populate recipe steps
+        // This assumes the recipes data comes from the backend
+        const steps = recipes.fullRecipe || [];
 
-        // Get the ordered list element
+        // Get the ordered list element for recipe steps
         const recipeStepsElement = document.getElementById("recipe-steps");
 
-        // Populate the steps dynamically
-        steps.forEach((step, index) => {
-            const listItem = document.createElement("li");
-            listItem.textContent = step;
-            recipeStepsElement.appendChild(listItem);
-        });
+        if (recipeStepsElement && steps.length) {
+            steps.forEach((step, index) => {
+                const listItem = document.createElement("li");
+                listItem.textContent = step;
+                recipeStepsElement.appendChild(listItem);
+            });
+        }
     </script>
 </body>
 

@@ -10,12 +10,12 @@ with open(file_path, 'r') as file:
 
 # List of keywords indicating animal meat
 animal_meat_keywords = [
-    'chicken', 'beef', 'bacon', 'lamb', 'shank', 'bone', 'pork', 'mutton', 'turkey', 
-    'duck', 'ham', 'hamburger', 'sausage', 'pepperoni', 'salami', 'prosciutto', 
-    'pastrami', 'fish', 'salmon', 'tuna', 'cod', 'shrimp', 'prawn', 'crab', 'lobster', 
-    'anchovy', 'oyster', 'clam', 'mussel', 'venison', 'bison', 'rabbit', 'goat', 
-    'kangaroo', 'chicken broth', 'beef broth', 'fish stock', 'bone broth', 'gelatin', 
-    'meatball', 'meatloaf', 'kebab', 'steak', 'ribs', 'chops', 'drumstick', 'cutlet', 
+    'chicken', 'beef', 'bacon', 'lamb', 'shank', 'bone', 'pork', 'mutton', 'turkey',
+    'duck', 'ham', 'hamburger', 'sausage', 'pepperoni', 'salami', 'prosciutto',
+    'pastrami', 'fish', 'salmon', 'tuna', 'cod', 'shrimp', 'prawn', 'crab', 'lobster',
+    'anchovy', 'oyster', 'clam', 'mussel', 'venison', 'bison', 'rabbit', 'goat',
+    'kangaroo', 'chicken broth', 'beef broth', 'fish stock', 'bone broth', 'gelatin',
+    'meatball', 'meatloaf', 'kebab', 'steak', 'ribs', 'chops', 'drumstick', 'cutlet',
     'pâté', 'meat'
 ]
 
@@ -26,13 +26,19 @@ gluten_keywords = [
     'kamut', 'einkorn', 'seitan', 'gluten', 'soy sauce', 'graham', 'bisquick'
 ]
 
-# Compile regex pattern for case-insensitive matching
+# List of keywords indicating non-halal ingredients
+non_halal_keywords = [
+    'pork', 'ham', 'swine', 'bacon', 'prosciutto', 'lard', 'alcohol', 'wine',
+    'beer', 'rum', 'whiskey', 'vodka', 'gin', 'brandy', 'liqueur', 'tequila',
+    'champagne', 'cognac', 'ethanol', 'vodka'
+]
+
+# Compile regex patterns for case-insensitive matching
 pattern = re.compile(r'\b(?:' + '|'.join(map(re.escape, animal_meat_keywords)) + r')\b', re.IGNORECASE)
-
-# Compile regex pattern for case-insensitive matching
 gluten_pattern = re.compile(r'\b(?:' + '|'.join(map(re.escape, gluten_keywords)) + r')\b', re.IGNORECASE)
+halal_pattern = re.compile(r'\b(?:' + '|'.join(map(re.escape, non_halal_keywords)) + r')\b', re.IGNORECASE)
 
-# Process the data to remove duplicates, sort ingredients, and flag non-vegetarian items
+# Process the data to remove duplicates, sort ingredients, and flag items
 for item in data:
     ingredients = item.get('ingredients', [])  # Safely get 'ingredients', defaulting to an empty list
     ingredients = list(set(ingredients))  # Remove duplicates
@@ -40,16 +46,13 @@ for item in data:
     item['ingredients'] = ingredients  # Update the item
 
     # Check if any ingredient matches the animal meat keywords
-    if any(pattern.search(ingredient) for ingredient in ingredients):
-        item['is_vegetarian'] = False
-    else:
-        item['is_vegetarian'] = True
-    
-     # Check if any ingredient matches the gluten keywords
-    if any(gluten_pattern.search(ingredient) for ingredient in ingredients):
-        item['is_gluten_free'] = False
-    else:
-        item['is_gluten_free'] = True
+    item['is_vegetarian'] = not any(pattern.search(ingredient) for ingredient in ingredients)
+
+    # Check if any ingredient matches the gluten keywords
+    item['is_gluten_free'] = not any(gluten_pattern.search(ingredient) for ingredient in ingredients)
+
+    # Check if any ingredient matches the non-halal keywords
+    item['is_halal'] = not any(halal_pattern.search(ingredient) for ingredient in ingredients)
 
 # Path for the new JSON file
 output_file_path = 'updated_recipes_data.json'

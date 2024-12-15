@@ -20,7 +20,7 @@ class RecipeRecommendationSystem:
         # Regex pattern to match different variations of ingredients
         pattern = re.compile(r'\b' + re.escape(query) + r'\w*\b', re.IGNORECASE)
         return bool(pattern.search(ingredient))  # Check if query matches any part of the ingredient
-    
+
     def recommend_recipes(self, available_ingredients, dietary_restrictions, max_cooking_time=None, excluded=None):
         """
         Main recommendation method with flexible filtering
@@ -31,6 +31,7 @@ class RecipeRecommendationSystem:
 
         vegetarian = 'vegetarian' in dietary_restrictions
         gluten_free = 'gluten_free' in dietary_restrictions
+        halal = 'halal' in dietary_restrictions
 
         print(excluded)
 
@@ -40,7 +41,7 @@ class RecipeRecommendationSystem:
             # Ingredient matching
             recipe_ingredients = [ing.lower() for ing in recipe['ingredients']]
             matched_ingredients = []
-         
+
             # check for excluded ingredients
             excludedIngredientFound = 0
             for recipe_ingredient in recipe_ingredients:
@@ -50,7 +51,6 @@ class RecipeRecommendationSystem:
 
             if excludedIngredientFound == 1:
                 continue
-           
 
             # Cek kecocokan bahan
             for recipe_ingredient in recipe_ingredients:
@@ -77,7 +77,9 @@ class RecipeRecommendationSystem:
                     continue
                 if gluten_free and not recipe.get('is_gluten_free', False):
                     continue
-                    
+                if halal and not recipe.get('is_halal', False):
+                    continue
+
                 # Fallback jika tidak ada 'cooking_time' pada resep
                 cooking_time = recipe.get('cooking_time', '> 20 mins')  # Default jika tidak ada
 
@@ -111,6 +113,7 @@ class RecipeRecommendationSystem:
                 return int(match.group(1))  # Extract the numeric part and convert to int
         return None  # Return None if the time format is not recognized
 
+
 # Flask Application
 app = Flask(__name__)
 recipe_system = RecipeRecommendationSystem()
@@ -118,11 +121,12 @@ recipe_system = RecipeRecommendationSystem()
 API_KEY = "JLH8Wgq4goo4kbFq2FXdJICgri0IdmInQIa1s4e4FfyUYcHWS6GWa6tP"
 PEXELS_URL = "https://api.pexels.com/v1/search"
 
+
 def fetch_image_url(recipe_name):
     headers = {"Authorization": API_KEY}
     params = {"query": recipe_name, "per_page": 1}
     response = requests.get(PEXELS_URL, headers=headers, params=params)
-    
+
     if response.status_code == 200:
         data = response.json()
         photos = data.get("photos", [])
@@ -130,12 +134,14 @@ def fetch_image_url(recipe_name):
             return photos[0]["src"]["original"]  # Return the first image URL
     return None  # Fallback if no image is found
 
+
 @app.route('/')
 def index():
     """
     Main landing page
     """
     return render_template('index.html')
+
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
@@ -149,10 +155,9 @@ def recommend():
     excluded = request.form.get('excluded', '').split(',')
     excluded = [exc.strip() for exc in excluded if exc.strip()]
 
-  
     dietary_restrictions = request.form.getlist('dietary_restrictions')
     max_cooking_time = request.form.get('cooking_time', None)
-    
+
     # Ensure max_cooking_time is an integer (if provided)
     if max_cooking_time:
         max_cooking_time = int(max_cooking_time)
@@ -162,14 +167,13 @@ def recommend():
         available_ingredients=ingredients,
         dietary_restrictions=dietary_restrictions,
         max_cooking_time=max_cooking_time,
-        excluded = excluded
+        excluded=excluded
     )
-    
+
     # Prepare response
     i = 0
     result = []
     for rec in recommendations:
-  
         i += 1
         recipe = rec['recipe']
         image_url = recipe["image_url"]  # Fetch image URL for each recipe
@@ -187,8 +191,9 @@ def recommend():
             'image_url': recipe['image_url'],
             'full_recipe': recipe['fullRecipe'],
         })
-    
+
     return render_template('recommendations.html', recommendations=result)
+
 
 @app.route('/recipe/<int:recipe_id>')
 def recipe_details(recipe_id):
@@ -204,9 +209,11 @@ def recipe_details(recipe_id):
         return render_template('recipe_details.html', recipe=recipe)
     return "Recipe not found", 404
 
+
 def main():
     # Ensure debug mode for development
     app.run(debug=True)
+
 
 if __name__ == "__main__":
     main()
