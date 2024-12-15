@@ -21,15 +21,19 @@ class RecipeRecommendationSystem:
         pattern = re.compile(r'\b' + re.escape(query) + r'\w*\b', re.IGNORECASE)
         return bool(pattern.search(ingredient))  # Check if query matches any part of the ingredient
     
-    def recommend_recipes(self, available_ingredients, dietary_restrictions, max_cooking_time=None):
+    def recommend_recipes(self, available_ingredients, dietary_restrictions, max_cooking_time=None, excluded=None):
         """
         Main recommendation method with flexible filtering
         """
         # Convert inputs to lowercase for case-insensitive matching
         available_ingredients = [ing.lower() for ing in available_ingredients]
+        excluded = [exc.lower() for exc in excluded]
+
         vegetarian = 0
         if 'vegetarian' in dietary_restrictions:
             vegetarian = 1
+
+        print(excluded)
 
         # Filter recipes
         recommended = []
@@ -37,6 +41,17 @@ class RecipeRecommendationSystem:
             # Ingredient matching
             recipe_ingredients = [ing.lower() for ing in recipe['ingredients']]
             matched_ingredients = []
+         
+            # check for excluded ingredients
+            excludedIngredientFound = 0
+            for recipe_ingredient in recipe_ingredients:
+                for exc in excluded:
+                    if self.match_ingredient_query(recipe_ingredient, exc):
+                        excludedIngredientFound = 1
+
+            if excludedIngredientFound == 1:
+                continue
+           
 
             # Cek kecocokan bahan
             for recipe_ingredient in recipe_ingredients:
@@ -130,6 +145,10 @@ def recommend():
     ingredients = request.form.get('ingredients', '').split(',')
     ingredients = [ing.strip() for ing in ingredients if ing.strip()]
 
+    excluded = request.form.get('excluded', '').split(',')
+    excluded = [exc.strip() for exc in excluded if exc.strip()]
+
+  
     dietary_restrictions = request.form.getlist('dietary_restrictions')
     max_cooking_time = request.form.get('cooking_time', None)
     
@@ -141,17 +160,18 @@ def recommend():
     recommendations = recipe_system.recommend_recipes(
         available_ingredients=ingredients,
         dietary_restrictions=dietary_restrictions,
-        max_cooking_time=max_cooking_time
+        max_cooking_time=max_cooking_time,
+        excluded = excluded
     )
     
     # Prepare response
     i = 0
     result = []
     for rec in recommendations:
-        print(i)
+  
         i += 1
         recipe = rec['recipe']
-        image_url = fetch_image_url(recipe["name"])  # Fetch image URL for each recipe
+        image_url = recipe["image_url"]  # Fetch image URL for each recipe
         recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default if no image found
 
         result.append({
@@ -175,7 +195,7 @@ def recipe_details(recipe_id):
     """
     recipe = next((r for r in recipe_system.recipes if r['id'] == recipe_id), None)
     # Fetch image URL based on recipe name
-    image_url = fetch_image_url(recipe["name"])
+    image_url = recipe['image_url']
     recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default image if not found
 
     if recipe:
