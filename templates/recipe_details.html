@@ -35,7 +35,15 @@
                 <h4>Recipe Instructions</h4>
                 <pre>{{ recipe.fullRecipe }}</pre>
 
-                <a href="/" class="btn btn-secondary">Back to Search</a>
+                <!-- Add recipe source link -->
+                {% if recipe.link %}
+                <div class="mt-3 mb-3">
+                    <strong>Source:</strong>
+                    <a href="{{ recipe.link }}" target="_blank">{{ recipe.link }}</a>
+                </div>
+                {% endif %}
+
+                <a href="/" class="mt-3 btn btn-secondary">Back to Search</a>
             </div>
         </div>
     </div>

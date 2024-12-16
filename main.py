@@ -201,14 +201,17 @@ def recipe_details(recipe_id):
     Detailed recipe page
     """
     recipe = next((r for r in recipe_system.recipes if r['id'] == recipe_id), None)
-    # Fetch image URL based on recipe name
-    image_url = recipe['image_url']
-    recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default image if not found
-
+    
     if recipe:
+        image_url = recipe['image_url']
+        recipe["image_url"] = image_url if image_url else "/static/default-image.jpg"  # Default image if not found
+
+        # Ensure the link is absolute
+        if recipe.get("link") and not recipe["link"].startswith(("http://", "https://")):
+            recipe["link"] = "http://" + recipe["link"]
+        
         return render_template('recipe_details.html', recipe=recipe)
     return "Recipe not found", 404
-
 
 def main():
     # Ensure debug mode for development

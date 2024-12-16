@@ -40,10 +40,7 @@
                     <div class="card-body">
                         <h5 class="card-title">{{ recipe.name }}</h5>
                         <p class="card-text">
-                            <strong>Cuisine:</strong> {{ recipe.cuisine }}<br>
                             <strong>Cooking Time:</strong> {{ recipe.cooking_time }}<br>
-                            <!-- New line for estimated time -->
-                            <strong>Skill Level:</strong> {{ recipe.skill_level }}<br>
                             <strong>Match:</strong> {{ recipe.match_percentage }}%
                         </p>
                         <a href="/recipe/{{ recipe.id }}" class="btn btn-primary">View Recipe</a>
